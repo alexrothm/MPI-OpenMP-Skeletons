@@ -83,4 +83,6 @@ int main(int argc, char** argv) {
 
     auto zipped = zip(myVec, myVec, myMultFunc);
     printVec(zipped);
+
+    return 0;
 }

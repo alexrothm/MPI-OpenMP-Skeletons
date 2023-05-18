@@ -1,6 +1,13 @@
 #ifndef MPI_OPENMP_VECTORDISTRIBUTION_HPP
 #define MPI_OPENMP_VECTORDISTRIBUTION_HPP
+//#pragma once
+
 #include <vector>
+#include <mpi.h>
+#include <omp.h>
+
+#include "Utils.hpp"
+
 
 template <typename T>
 class VectorDistribution {
@@ -11,15 +18,24 @@ public:
      */
     VectorDistribution(int size);
 
-    // TODO Copy constructor if needed
     /**
+     * \brief Creates a VectorDistribution and initializes it with the input \em vector.
+     * @param vector Input vector.
+     */
+    VectorDistribution(std::vector<T> vector);
+
+    // TODO Copy constructor if needed
+
+/**
      * \brief Destructor.
      */
     ~VectorDistribution();
 
     void scatterData(const std::vector<T>& data);
 
-    // TODO check if MPI_Gather needed
+    void gatherVectors(std::vector<T> &results);
+
+    void printLocal();
 
     /**
      * \brief
@@ -29,13 +45,13 @@ public:
      * @param f
      * @return
      */
-    template<typename R, typename MapFunctor>
+    template <typename R, typename MapFunctor>
     VectorDistribution<R> map(MapFunctor &f);
 
-    template<typename R, typename ReduceFunctor>
-    R reduce(ReduceFunctor &f);
+    template <typename ReduceFunctor>
+    T reduce(ReduceFunctor &f);
 
-    template<typename R, typename T2, typename ZipFunctor>
+    template <typename R, typename T2, typename ZipFunctor>
     VectorDistribution<R> zip(VectorDistribution<T2>& b, ZipFunctor& f);
 
 private:
@@ -49,6 +65,7 @@ private:
     int localSize;
     // remaining size for last process
     int remainingSize;
+    // TODO add index
 
     std::vector<T> rootVector;
     std::vector<T> localVector;
@@ -59,8 +76,6 @@ private:
     void init();
 };
 
+#include "../src/VectorDistribution.cpp"
 
 #endif //MPI_OPENMP_VECTORDISTRIBUTION_HPP
-
-
-

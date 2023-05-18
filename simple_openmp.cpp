@@ -27,7 +27,7 @@ std::vector<T> map(std::vector<T> vector, Functor& f) {
     auto n = vector.size();
     std::vector<T> result(n);
 
-#pragma omp parallel for
+    #pragma omp parallel for
     for (size_t i = 0; i < n; i++) {
         result[i] = f(vector[i]);
     }
@@ -40,7 +40,7 @@ T reduce(std::vector<T> vector, Functor& f) {
     T result = vector.front();
     vector.erase(vector.begin());
 
-#pragma omp parallel for
+    #pragma omp parallel for
     for (size_t i = 0; i < vector.size(); i++) {
         result = f(result, vector[i]);
     }
@@ -53,7 +53,7 @@ std::vector<T> zip(std::vector<T> vector1, std::vector<T> vector2, Functor& f) {
     size_t len = vector1.size();
     std::vector<T> result(len);
 
-#pragma omp parallel for
+    #pragma omp parallel for
     for (size_t i = 0; i < len; i++) {
         result[i] = f(vector1.at(i), vector2.at(i));
     }

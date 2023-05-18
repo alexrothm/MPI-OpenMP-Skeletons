@@ -6,7 +6,8 @@ enable_testing()
 
 include_directories(include)
 add_executable(sequential-comp sequential_comparison.cpp)
-add_executable(mpi-openmp mpi-openmp.cpp src/VectorDistribution.cpp include/VectorDistribution.hpp)
+add_executable(simple-openmp simple_openmp.cpp src/VectorDistribution.cpp include/VectorDistribution.hpp src/Utils.cpp include/Utils.hpp)
+add_executable(mpi-openmp main.cpp include/Utils.hpp src/Utils.cpp include/functors.hpp include/VectorDistribution.hpp)
 
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
