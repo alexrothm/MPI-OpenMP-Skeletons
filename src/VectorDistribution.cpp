@@ -1,6 +1,17 @@
 #include "VectorDistribution.hpp"
 
 template <typename T>
+VectorDistribution<T>::VectorDistribution()
+    : numProcesses(0), rank(0), vectorSize(0), localSize(0), remainingSize(0) {}
+
+template <typename T>
+VectorDistribution<T>::VectorDistribution(const VectorDistribution<T> &cs) : vectorSize(cs.vectorSize) {
+    init();
+
+    localVector = cs.localVector;
+}
+
+template <typename T>
 VectorDistribution<T>::VectorDistribution(int size) : vectorSize(size) {
     init();
 }
@@ -24,10 +35,10 @@ void VectorDistribution<T>::init() {
     localSize = vectorSize / numProcesses;
     remainingSize = vectorSize % numProcesses;
 
-    // set size of last process
-    if (rank == numProcesses - 1) {
+    // set size of last process TODO check if no errors occur
+    //if (rank == numProcesses - 1) {
         localSize += remainingSize;
-    }
+    //}
 
     if (rank == 0) {
         rootVector.resize(vectorSize);
@@ -37,6 +48,11 @@ void VectorDistribution<T>::init() {
 
     localVector.resize(localSize);
     gatheredVector.resize(vectorSize);
+}
+
+template <typename T>
+void VectorDistribution<T>::setLocal(int localIndex, const T& value) {
+    localVector[localIndex] = value;
 }
 
 template <typename T>
@@ -52,10 +68,11 @@ void VectorDistribution<T>::gatherVectors(std::vector<T>& results) {
 
 template <typename T>
 void VectorDistribution<T>::printLocal() {
+    int tmpSize = (rank == numProcesses - 1) ? (localSize - remainingSize) : localSize;
     for (int i = 0; i < numProcesses; i++) {
-        if (Utils::proc_rank == i) {
+        if (rank == i) {
             std::cout << "Local Vector (Rank " << rank <<"): [ ";
-            for (int j = 0; j < localSize; j++) {
+            for (int j = 0; j < tmpSize; j++) {
                 std::cout << localVector[j] << " ";
             }
             std::cout << "]" << std::endl;
@@ -82,11 +99,12 @@ void VectorDistribution<T>::scatterData(const std::vector<T> &data) {
 template <typename T>
 template <typename R, typename MapFunctor>
 VectorDistribution<R> VectorDistribution<T>::map(MapFunctor &f) {
-    VectorDistribution<R> result(localSize);
+    VectorDistribution<R> result(vectorSize);
 
     #pragma omp parallel for
     for (int i = 0; i < localSize; i++) {
-        result[i] = f(localVector[i]);
+//        std::cout << "Rank " << rank << "Number: " << f(localVector[i]) << std::endl;
+        result.setLocal(i, f(localVector[i]));
     }
     return result;
 }

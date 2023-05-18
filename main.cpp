@@ -13,6 +13,7 @@ struct Add : MapFunctor<int, int> {
 
 int main(int argc, char** argv) {
     initSkeletons(argc, argv);
+    omp_set_num_threads(2);
     std::cout << omp_get_num_threads() << std::endl;
     std::cout << Utils::proc_rank << std::endl;
     std::cout << Utils::num_procs << std::endl;
@@ -22,7 +23,11 @@ int main(int argc, char** argv) {
 
     VectorDistribution<int> vecD(myVec);
 
-    vecD.printLocal();
+    VectorDistribution<int> vecResult;
+
+    vecResult = vecD.map<int>(mapAddFunctor);
+
+    vecResult.printLocal();
 
 
     terminateSkeletons();

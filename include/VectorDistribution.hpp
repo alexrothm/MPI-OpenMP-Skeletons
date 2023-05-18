@@ -12,6 +12,8 @@
 template <typename T>
 class VectorDistribution {
 public:
+    VectorDistribution();
+
     /**
      * \brief Creates a VectorDistribution of \em size elements.
      * @param size
@@ -25,11 +27,14 @@ public:
     VectorDistribution(std::vector<T> vector);
 
     // TODO Copy constructor if needed
+    VectorDistribution(const VectorDistribution<T>& cs);
 
-/**
+    /**
      * \brief Destructor.
      */
     ~VectorDistribution();
+
+    void setLocal(int localIndex, const T& value);
 
     void scatterData(const std::vector<T>& data);
 
