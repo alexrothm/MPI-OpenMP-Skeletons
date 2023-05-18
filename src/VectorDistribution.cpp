@@ -57,8 +57,9 @@ void VectorDistribution<T>::setLocal(int localIndex, const T& value) {
 
 template <typename T>
 void VectorDistribution<T>::gatherVectors(std::vector<T>& results) {
-    MPI_Gather(localVector.data(), localSize, MPI_BYTE,
-               gatheredVector.data(), localSize, MPI_BYTE,
+    size_t s = localSize * sizeof(T);
+    MPI_Gather(localVector.data(), s, MPI_BYTE,
+               gatheredVector.data(), s, MPI_BYTE,
                0, MPI_COMM_WORLD);
 
     if (rank == 0) {
