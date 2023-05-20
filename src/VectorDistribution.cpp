@@ -45,6 +45,11 @@ void VectorDistribution<T>::init() {
     localVector.resize(localSize);
 }
 
+template<typename T>
+T VectorDistribution<T>::getLocal(int localIndex) {
+    return localVector[localIndex];
+}
+
 template <typename T>
 void VectorDistribution<T>::setLocal(int localIndex, const T& value) {
     localVector[localIndex] = value;
@@ -75,11 +80,9 @@ void VectorDistribution<T>::scatterData(const std::vector<T> &data) {
 
 template <typename T>
 void VectorDistribution<T>::gatherVectors(std::vector<T>& results) {
-    auto text =  (remainingSize) ? "Unequal" : "Equal";
-    if (rank == 0)
-        std::cout << text << std::endl;
+//    auto text =  (remainingSize) ? "Unequal" : "Equal";
     if (remainingSize)
-        gatherUnequalVecors(results);
+        gatherUnequalVectors(results);
     else
         gatherEqualVectors(results);
 }
@@ -96,7 +99,7 @@ void VectorDistribution<T>::gatherEqualVectors(std::vector<T>& results) {
 }
 
 template <typename T>
-void VectorDistribution<T>::gatherUnequalVecors(std::vector<T>& results) {
+void VectorDistribution<T>::gatherUnequalVectors(std::vector<T>& results) {
     // Gather the sizes of local vectors from all processes
     int* recvCounts = new int[numProcesses];
     MPI_Gather(&localSize, 1, MPI_INT,
