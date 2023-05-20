@@ -36,6 +36,11 @@ public:
 
     void setLocal(int localIndex, const T& value);
 
+    T getLocal(int localIndex);
+
+    // TODO getGlobal()
+    //  bool isLocal()
+
     void scatterData(const std::vector<T>& data);
 
     void gatherVectors(std::vector<T>& results);
@@ -79,7 +84,7 @@ private:
 
     void gatherEqualVectors(std::vector<T> &results);
 
-    void gatherUnequalVecors(std::vector<T> &results);
+    void gatherUnequalVectors(std::vector<T> &results);
 };
 
 #include "../src/VectorDistribution.cpp"
