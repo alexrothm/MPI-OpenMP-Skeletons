@@ -171,5 +171,11 @@ T VectorDistribution<T>::reduce(ReduceFunctor &f) {
 template <typename T>
 template <typename R, typename T2, typename ZipFunctor>
 VectorDistribution<R> VectorDistribution<T>::zip(VectorDistribution<T2> &b, ZipFunctor &f) {
-    return VectorDistribution<R>(0);
+    VectorDistribution<R> result(vectorSize);
+
+    #pragma omp parallel for
+    for (int i = 0; i < localSize; i++) {
+        result.setLocal(i, f(localVector[i], b.getLocal(i)));
+    }
+    return result;
 }
