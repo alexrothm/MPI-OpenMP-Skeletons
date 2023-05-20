@@ -101,9 +101,11 @@ void VectorDistribution<T>::gatherEqualVectors(std::vector<T>& results) {
 template <typename T>
 void VectorDistribution<T>::gatherUnequalVectors(std::vector<T>& results) {
     // Gather the sizes of local vectors from all processes
+    size_t count = sizeof(T);
+
     int* recvCounts = new int[numProcesses];
-    MPI_Gather(&localSize, 1, MPI_INT,
-               recvCounts, 1, MPI_INT,
+    MPI_Gather(&localSize, count, MPI_BYTE,
+               recvCounts, count, MPI_BYTE,
                0, MPI_COMM_WORLD);
 
     if (rank == 0) {
@@ -120,8 +122,9 @@ void VectorDistribution<T>::gatherUnequalVectors(std::vector<T>& results) {
 //        results.resize(totalSize);
 
         // Gather the data from all processes
-        MPI_Gatherv(localVector.data(), localSize, MPI_INT,
-                    results.data(), recvCounts, displacements, MPI_INT,
+        size_t s = localSize * sizeof(T);
+        MPI_Gatherv(localVector.data(), s, MPI_BYTE,
+                    results.data(), recvCounts, displacements, MPI_BYTE,
                     0, MPI_COMM_WORLD);
 
         delete[] displacements;
