@@ -38,7 +38,7 @@ public:
 
     void scatterData(const std::vector<T>& data);
 
-    void gatherVectors(std::vector<T> &results);
+    void gatherVectors(std::vector<T>& results);
 
     void printLocal();
 
@@ -70,15 +70,16 @@ private:
     int localSize;
     // remaining size for last process
     int remainingSize;
-    // TODO add index
+    // start of global index
+    int firstIndex;
 
-    std::vector<T> rootVector;
     std::vector<T> localVector;
-    std::vector<T> gatheredVector;
-
-    // TODO add init function
 
     void init();
+
+    void gatherEqualVectors(std::vector<T> &results);
+
+    void gatherUnequalVecors(std::vector<T> &results);
 };
 
 #include "../src/VectorDistribution.cpp"
