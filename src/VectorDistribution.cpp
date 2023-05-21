@@ -1,4 +1,6 @@
+#include <cstring>
 #include "VectorDistribution.hpp"
+#include "unistd.h"
 
 template <typename T>
 VectorDistribution<T>::VectorDistribution()
@@ -81,7 +83,7 @@ void VectorDistribution<T>::scatterData(const std::vector<T> &data) {
 template <typename T>
 void VectorDistribution<T>::gatherVectors(std::vector<T>& results) {
 //    auto text =  (remainingSize) ? "Unequal" : "Equal";
-    if (remainingSize)
+    if (true)
         gatherUnequalVectors(results);
     else
         gatherEqualVectors(results);
@@ -101,41 +103,50 @@ void VectorDistribution<T>::gatherEqualVectors(std::vector<T>& results) {
 template <typename T>
 void VectorDistribution<T>::gatherUnequalVectors(std::vector<T>& results) {
     // Gather the sizes of local vectors from all processes
-    size_t count = sizeof(T);
+    std::vector<int> recvCounts(numProcesses);
+    int elemSize = sizeof(T);
+    size_t s = localSize * elemSize;
 
-    int* recvCounts = new int[numProcesses];
-    MPI_Gather(&localSize, count, MPI_BYTE,
-               recvCounts, count, MPI_BYTE,
-               0, MPI_COMM_WORLD);
+    MPI_Allgather(&s, elemSize, MPI_BYTE, recvCounts.data(), elemSize, MPI_BYTE, MPI_COMM_WORLD);
+
+    int totalCount = 0;
+    std::vector<int> displacements(numProcesses);
+    std::vector<T> gatheredVector(vectorSize);
 
     if (rank == 0) {
-        // Calculate the displacements array
-        int* displacements = new int[numProcesses];
-        int displacement = 0;
-        for (int i = 0; i < numProcesses; i++) {
-            displacements[i] = displacement;
-            displacement += recvCounts[i];
+        displacements[0] = 0;
+        totalCount += recvCounts[0];
+
+        for (int i = 1; i < numProcesses; i++) {
+            totalCount += recvCounts[i];
+            displacements[i] = displacements[i-1] + recvCounts[i-1];
         }
 
-        // Resize the gatheredData vector
-//        int totalSize = displacement;
-//        results.resize(totalSize);
-
-        // Gather the data from all processes
-        size_t s = localSize * sizeof(T);
-        MPI_Gatherv(localVector.data(), s, MPI_BYTE,
-                    results.data(), recvCounts, displacements, MPI_BYTE,
-                    0, MPI_COMM_WORLD);
-
-        delete[] displacements;
-    } else {
-        // Send the data to the root process
-        MPI_Gatherv(localVector.data(), localSize, MPI_INT,
-                    nullptr, nullptr, nullptr, MPI_INT,
-                    0, MPI_COMM_WORLD);
+        std::cout << "RecvCounts: ";
+        for (auto i : recvCounts) {
+            std::cout << i << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "Total count: " << totalCount << std::endl;
+        for (auto i : displacements) {
+            std::cout << i << " ";
+        }
+        std::cout << std::endl;
+        gatheredVector.resize(totalCount / elemSize);
     }
+//    int i = 0;
+//    while (i == 0) {
+//        sleep(5);
+//    }
+    int totalBytes = totalCount * elemSize;
 
-    delete[] recvCounts;
+    MPI_Gatherv(localVector.data(), localSize * elemSize, MPI_BYTE,
+                gatheredVector.data(), recvCounts.data(), displacements.data(), MPI_BYTE,
+                0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        results = gatheredVector;
+    }
 }
 
 template <typename T>
@@ -168,7 +179,40 @@ VectorDistribution<R> VectorDistribution<T>::map(MapFunctor &f) {
 template <typename T>
 template <typename ReduceFunctor>
 T VectorDistribution<T>::reduce(ReduceFunctor &f) {
-    return nullptr;
+    T result;
+
+    T localResult = T();
+    #pragma omp parallel shared(localVector)
+    {
+        T privateLocalResult = T();
+        auto privateSize = localVector.size();
+        //std::cout << privateSize << " !!! " << std::endl;
+        #pragma omp for
+        for (int i = 0; i < localSize; i++) {
+            privateLocalResult = f(privateLocalResult, localVector[i]);
+        }
+        //std::cout << privateLocalResult << std::endl;
+        #pragma omp critical
+        {
+            localResult = f(localResult, privateLocalResult);
+        }
+    }
+
+    // Gather local results to the root process
+    T* allResults = new T[numProcesses];
+
+    size_t s = sizeof(T);
+    MPI_Gather(&localResult, s, MPI_BYTE,
+               allResults, s,MPI_BYTE,
+               0, MPI_COMM_WORLD);
+
+
+    for (int i = 0; i < numProcesses; i++) {
+        result = f(result, allResults[i]);
+    }
+    delete[] allResults;
+
+    return result;
 }
 
 template <typename T>
