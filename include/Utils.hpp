@@ -10,10 +10,6 @@ class Utils {
 public:
     static int proc_rank; // process rank
     static int num_procs; // total number of processes
-
-    // TODO check if num_threads needed
-    // static int num_threads;
-
 };
 
 void initSkeletons(int argc, char **argv);

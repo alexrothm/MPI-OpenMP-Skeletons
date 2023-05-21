@@ -37,7 +37,7 @@ void VectorDistribution<T>::init() {
 
     // set first index befor adjusting last process vectorSize
     firstIndex = rank * localSize;
-    // set size of last process TODO remove and assume that np divides vectorSize
+    // set size of last process
     if (rank == numProcesses - 1) {
         localSize += remainingSize;
     }
