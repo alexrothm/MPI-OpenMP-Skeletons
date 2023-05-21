@@ -1,10 +1,11 @@
 #ifndef MPI_OPENMP_VECTORDISTRIBUTION_HPP
 #define MPI_OPENMP_VECTORDISTRIBUTION_HPP
-//#pragma once
+#pragma once
 
 #include <vector>
 #include <mpi.h>
 #include <omp.h>
+#include <sstream>
 
 #include "Utils.hpp"
 
@@ -20,14 +21,13 @@ public:
      */
     VectorDistribution(int size);
 
+    VectorDistribution(const VectorDistribution<T>& cs);
+
     /**
      * \brief Creates a VectorDistribution and initializes it with the input \em vector.
      * @param vector Input vector.
      */
-    VectorDistribution(std::vector<T> vector);
-
-    // TODO Copy constructor if needed
-    VectorDistribution(const VectorDistribution<T>& cs);
+    VectorDistribution(std::vector<T>& vector);
 
     /**
      * \brief Destructor.
@@ -38,14 +38,13 @@ public:
 
     T getLocal(int localIndex);
 
-    // TODO getGlobal()
-    //  bool isLocal()
-
     void scatterData(const std::vector<T>& data);
 
     void gatherVectors(std::vector<T>& results);
 
     void printLocal();
+
+    void show(const std::string& descr);
 
     /**
      * \brief

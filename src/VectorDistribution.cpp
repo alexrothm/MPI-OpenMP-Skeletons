@@ -1,6 +1,4 @@
-#include <cstring>
 #include "VectorDistribution.hpp"
-#include "unistd.h"
 
 template <typename T>
 VectorDistribution<T>::VectorDistribution()
@@ -19,7 +17,7 @@ VectorDistribution<T>::VectorDistribution(int size) : vectorSize(size) {
 }
 
 template <typename T>
-VectorDistribution<T>::VectorDistribution(std::vector<T> vector) : vectorSize((int)vector.size()) {
+VectorDistribution<T>::VectorDistribution(std::vector<T>& vector) : vectorSize((int)vector.size()) {
     init();
     this->scatterData(vector);
 }
@@ -58,7 +56,7 @@ void VectorDistribution<T>::setLocal(int localIndex, const T& value) {
 }
 
 template <typename T>
-void VectorDistribution<T>::scatterData(const std::vector<T> &data) {
+void VectorDistribution<T>::scatterData(const std::vector<T>& data) {
     // using this seems faster than MPI_Scatter
     #pragma omp parallel for
     for (int i = 0; i < localSize; i++) {
@@ -83,7 +81,7 @@ void VectorDistribution<T>::scatterData(const std::vector<T> &data) {
 template <typename T>
 void VectorDistribution<T>::gatherVectors(std::vector<T>& results) {
 //    auto text =  (remainingSize) ? "Unequal" : "Equal";
-    if (true)
+    if (remainingSize)
         gatherUnequalVectors(results);
     else
         gatherEqualVectors(results);
@@ -107,15 +105,13 @@ void VectorDistribution<T>::gatherUnequalVectors(std::vector<T>& results) {
     int elemSize = sizeof(T);
     const size_t s = localSize * elemSize;
 
-    std::cout << rank << ": " << s << std::endl;
-
     //Changed to gather
     MPI_Gather(&s, 1, MPI_INT, recvCounts, 1, MPI_INT, 0,MPI_COMM_WORLD);
-//    MPI_Barrier(MPI_COMM_WORLD);
-    std::cout << "RecvCounts: ";
-    for (int i = 0; i < numProcesses; i++) {
-        std::cout << recvCounts[i] << " ";
-    }
+
+//    std::cout << "RecvCounts: ";
+//    for (int i = 0; i < numProcesses; i++) {
+//        std::cout << recvCounts[i] << " ";
+//    }
 
     int totalCount = 0;
     int* displacements = new int[numProcesses];
@@ -133,12 +129,13 @@ void VectorDistribution<T>::gatherUnequalVectors(std::vector<T>& results) {
 //        for (int i = 0; i < numProcesses; i++) {
 //            std::cout << recvCounts[i] << " ";
 //        }
-        std::cout << std::endl;
-        std::cout << "Total count: " << totalCount << std::endl;
-        for (int i = 0; i < numProcesses; i++) {
-            std::cout << displacements[i] << " ";
-        }
-        std::cout << std::endl;
+//        std::cout << std::endl;
+//        std::cout << "Total count: " << totalCount << std::endl;
+//        for (int i = 0; i < numProcesses; i++) {
+//            std::cout << displacements[i] << " ";
+//        }
+//        std::cout << std::endl;
+
 //        gatheredVector.resize(totalCount);
     }
 
@@ -166,6 +163,31 @@ void VectorDistribution<T>::printLocal() {
         }
         MPI_Barrier(MPI_COMM_WORLD);
     }
+}
+
+template<typename T>
+void VectorDistribution<T>::show(const std::string &descr) {
+    std::vector<T> out(vectorSize);
+    std::ostringstream s;
+
+    if (descr.size() > 0)
+        s << descr << std::endl;
+
+    gatherVectors(out);
+
+    if (rank == 0) {
+        s << "[ ";
+        for (int i = 0; i < vectorSize; i++) {
+            s << out[i];
+            s << " ";
+        }
+        s << "]" << std::endl;
+        s << std::endl;
+
+        std::cout << s.str().c_str();
+    }
+
+    out.clear();
 }
 
 template <typename T>
