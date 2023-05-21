@@ -103,15 +103,22 @@ void VectorDistribution<T>::gatherEqualVectors(std::vector<T>& results) {
 template <typename T>
 void VectorDistribution<T>::gatherUnequalVectors(std::vector<T>& results) {
     // Gather the sizes of local vectors from all processes
-    std::vector<int> recvCounts(numProcesses);
+    int* recvCounts = new int[numProcesses];
     int elemSize = sizeof(T);
-    size_t s = localSize * elemSize;
+    const size_t s = localSize * elemSize;
 
-    MPI_Allgather(&s, elemSize, MPI_BYTE, recvCounts.data(), elemSize, MPI_BYTE, MPI_COMM_WORLD);
+    std::cout << rank << ": " << s << std::endl;
+
+    //Changed to gather
+    MPI_Gather(&s, 1, MPI_INT, recvCounts, 1, MPI_INT, 0,MPI_COMM_WORLD);
+//    MPI_Barrier(MPI_COMM_WORLD);
+    std::cout << "RecvCounts: ";
+    for (int i = 0; i < numProcesses; i++) {
+        std::cout << recvCounts[i] << " ";
+    }
 
     int totalCount = 0;
-    std::vector<int> displacements(numProcesses);
-    std::vector<T> gatheredVector(vectorSize);
+    int* displacements = new int[numProcesses];
 
     if (rank == 0) {
         displacements[0] = 0;
@@ -122,31 +129,29 @@ void VectorDistribution<T>::gatherUnequalVectors(std::vector<T>& results) {
             displacements[i] = displacements[i-1] + recvCounts[i-1];
         }
 
-        std::cout << "RecvCounts: ";
-        for (auto i : recvCounts) {
-            std::cout << i << " ";
-        }
+//        std::cout << "RecvCounts: ";
+//        for (int i = 0; i < numProcesses; i++) {
+//            std::cout << recvCounts[i] << " ";
+//        }
         std::cout << std::endl;
         std::cout << "Total count: " << totalCount << std::endl;
-        for (auto i : displacements) {
-            std::cout << i << " ";
+        for (int i = 0; i < numProcesses; i++) {
+            std::cout << displacements[i] << " ";
         }
         std::cout << std::endl;
-        gatheredVector.resize(totalCount / elemSize);
+//        gatheredVector.resize(totalCount);
     }
-//    int i = 0;
-//    while (i == 0) {
-//        sleep(5);
-//    }
-    int totalBytes = totalCount * elemSize;
 
     MPI_Gatherv(localVector.data(), localSize * elemSize, MPI_BYTE,
-                gatheredVector.data(), recvCounts.data(), displacements.data(), MPI_BYTE,
+                results.data(), recvCounts, displacements, MPI_BYTE,
                 0, MPI_COMM_WORLD);
 
-    if (rank == 0) {
-        results = gatheredVector;
-    }
+    delete[] recvCounts;
+    delete[] displacements;
+
+//    if (rank == 0) {
+//        results = gatheredVector;
+//    }
 }
 
 template <typename T>

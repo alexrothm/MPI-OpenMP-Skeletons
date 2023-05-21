@@ -40,9 +40,7 @@ int main(int argc, char** argv) {
     ZipAdd myAddZip;
 
     std::vector<int> myVec{1, 2, 3, 4, 5, 6, 7, 8, 9};
-    std::vector<double> myDoubleVec{1.25, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0};
 
-    VectorDistribution<double> zipVector(myDoubleVec);
 
     // Debug
 //    int i = 0;
@@ -51,6 +49,7 @@ int main(int argc, char** argv) {
     std::ostringstream s;
     double end;
     double start = MPI_Wtime();
+
     VectorDistribution<int> vecD(myVec);
     end = MPI_Wtime();
 
@@ -58,11 +57,10 @@ int main(int argc, char** argv) {
 //    if (Utils::proc_rank == 0)
 //        printf("%s", s.str().c_str());
 //    std::cout << "VecD: ";
-    vecD.printLocal();
+/* INT   vecD.printLocal();
 
 
     VectorDistribution<int> vecResult;
-
 
     auto myAddLamda = [](int v1) {return v1 + 20;};
     vecResult = vecD.map<int>(myAddLamda);
@@ -70,18 +68,23 @@ int main(int argc, char** argv) {
 
     std::vector<int> test(9);
     vecResult.gatherVectors(test);
-    printVec(test);
+    printVec(test);*/
 
-    //zipResult = vecD.zip<int>(zipVector, myAddZip);
+    //DOUBLE
+    std::vector<double> myDoubleVec{1.25, 2.0, 3.0, 4.0, 5.25, 6.0, 7.0, 8.0, 9.0};
 
-//    auto myTest = [](double v1, double v2) {return v1 + v2; };
-//    auto zipResult = zipVector.zip<double>(zipVector, myTest);
-//
-//    zipResult.printLocal();
-//
-//    std::vector<double> finalResult(9);
-//    zipResult.gatherVectors(finalResult);
-//    printVec(finalResult);
+    VectorDistribution<double> zipVector(myDoubleVec);
+    zipVector.printLocal();
+//    zipResult = vecD.zip<int>(zipVector, myAddZip);
+
+    auto myTest = [](double v1, double v2) {return v1 + v2; };
+    auto zipResult = zipVector.zip<double>(zipVector, myTest);
+
+    zipResult.printLocal();
+
+    std::vector<double> finalResult(9);
+    zipResult.gatherVectors(finalResult);
+    printVec(finalResult);
 
 
 
