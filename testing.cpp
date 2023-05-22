@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
     VectorDistribution<int> vecResult;
 
     auto myAddLamda = [](int v1) {return v1 + 20;};
-    vecResult = vecD.map<int>(myAddLamda);
+    vecResult = vecD.map<int>(mapAddFunctor);
     vecResult.show("After mapping");
 
     std::vector<int> test(9);
