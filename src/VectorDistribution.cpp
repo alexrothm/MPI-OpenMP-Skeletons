@@ -206,7 +206,7 @@ VectorDistribution<R> VectorDistribution<T>::map(MapFunctor &f) {
 template <typename T>
 template <typename ReduceFunctor>
 T VectorDistribution<T>::reduce(ReduceFunctor &f) {
-    T result;
+    T result = T();
 
     T localResult = T();
     #pragma omp parallel shared(localVector)
