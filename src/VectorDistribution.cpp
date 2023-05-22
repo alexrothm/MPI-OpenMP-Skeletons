@@ -209,7 +209,7 @@ T VectorDistribution<T>::reduce(ReduceFunctor &f) {
     T result = T();
 
     T localResult = T();
-    #pragma omp parallel shared(localVector)
+    #pragma omp parallel
     {
         T privateLocalResult = T();
         auto privateSize = localVector.size();

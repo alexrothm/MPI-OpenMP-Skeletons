@@ -36,9 +36,7 @@ int main(int argc, char** argv) {
 
     omp_set_num_threads(threads);
 
-    printf("Iteration = %i, Size = %i, Threads = %i\n", iterations, size, threads);
-
-//    printf("Iteration = %i, Size = %i\n", iterations, size);
+//    printf("Iteration = %i, Size = %i, Threads = %i\n", iterations, size, threads);
 
     // Start
     double startTime, mapTime, reduceTime, zipTime;
@@ -59,8 +57,8 @@ int main(int argc, char** argv) {
 
         VectorDistribution<int> inputVD1(input1);
         VectorDistribution<int> inputVD2(input2);
-        inputVD1.show("VD1");
-        inputVD2.show("VD2");
+//        inputVD1.show("VD1");
+//        inputVD2.show("VD2");
 
         // Output
         VectorDistribution<int> outputMap;
@@ -79,7 +77,7 @@ int main(int argc, char** argv) {
 
         double t = MPI_Wtime();
         outputMap = inputVD1.map<int>(mapFunction);
-        outputMap.show("outMap");
+//        outputMap.show("outMap");
 
         // Timing
         mapTime += MPI_Wtime() - t;
@@ -89,7 +87,7 @@ int main(int argc, char** argv) {
         //
         t = MPI_Wtime();
         outputZip = inputVD1.zip<int>(inputVD2, zipFunction);
-        outputZip.show("OutZip");
+//        outputZip.show("OutZip");
 
         // Timing
         zipTime += MPI_Wtime() - t;
@@ -99,7 +97,8 @@ int main(int argc, char** argv) {
         //
         t = MPI_Wtime();
         outReduce = outputZip.reduce(reduceFunction);
-        std::cout << "ourReduce: " << outReduce << std::endl;
+//        if (Utils::proc_rank == 0)
+//            std::cout << "ourReduce: "  << outReduce << std::endl;
 
         // Timing
         reduceTime += MPI_Wtime() - t;
@@ -120,11 +119,13 @@ int main(int argc, char** argv) {
 //              << "Zip time: " << zipTime / iterations << "s" << std::endl
 //              << "Reduce time: " << reduceTime / iterations << "s" << std::endl;
 
-    printf("Map;%i;%f;%i\n", size, mapTime / iterations, threads);
-    printf("Zip;%i;%f;%i\n", size, zipTime / iterations, threads);
-    printf("Red;%i;%f;%i\n", size, reduceTime / iterations, threads);
-    double totalTime = MPI_Wtime() - startTime;
-    printf("Time/runs;%i;%f;%i\n", size, totalTime / iterations, threads);
+    if (Utils::proc_rank == 0) {
+        printf("Map;%i;%f;%i\n", size, mapTime / iterations, threads);
+        printf("Zip;%i;%f;%i\n", size, zipTime / iterations, threads);
+        printf("Red;%i;%f;%i\n", size, reduceTime / iterations, threads);
+        double totalTime = MPI_Wtime() - startTime;
+        printf("Time/runs;%i;%f;%i\n", size, totalTime / iterations, threads);
+    }
 
 //    std::cout << "Map;" << mapTime / iterations << "s" << std::endl
 //              << "Zip time: " << zipTime / iterations << "s" << std::endl

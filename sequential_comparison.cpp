@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
         //
         double t = MPI_Wtime();
         outputMap = map(input1,mapFunction);
-        printVec(outputMap);
+//        printVec(outputMap);
 
         // Timing
         mapTime += MPI_Wtime() - t;
@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
         //
         t = MPI_Wtime();
         outputZip = zip(input1, input2, zipFunction);
-        printVec(outputZip);
+//        printVec(outputZip);
 
         // Timing
         zipTime += MPI_Wtime() - t;
@@ -142,7 +142,7 @@ int main(int argc, char** argv) {
         //
         t = MPI_Wtime();
         outReduce = reduce(outputZip, reduceFunction);
-        std::cout << "outReduce\n" << outReduce << std::endl;
+//        std::cout << "outReduce\n" << outReduce << std::endl;
 
         // Timing
         reduceTime += MPI_Wtime() - t;

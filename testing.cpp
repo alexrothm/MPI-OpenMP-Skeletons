@@ -33,69 +33,30 @@ void printVec(std::vector<T> vector) {
 int main(int argc, char** argv) {
     initSkeletons(argc, argv);
 //    std::cout << omp_get_max_threads() << std::endl;
-    omp_set_num_threads(2);
+    omp_set_num_threads(1);
 
 //    std::cout << omp_get_num_threads() << std::endl;
 //    std::cout << Utils::proc_rank << std::endl;
 //    std::cout << Utils::num_procs << std::endl;
-    Add mapAddFunctor;
-    ZipAdd myAddZip;
 
-    std::vector<int> myVec{1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<int> intVec{2, 4, 6, 8, 10, 12, 14, 16, 18};
+    std::vector<double> doubleVec{2.5, 4.0, 6.0, 8.0, 10.5, 12.0, 14.0, 16.0, 18.0};
 
-    std::ostringstream s;
-    double end;
-    double start = MPI_Wtime();
+    VectorDistribution<int> intVecD(intVec);
+    VectorDistribution<double> doubleVecD(doubleVec);
 
-    VectorDistribution<int> vecD(myVec);
-    vecD.show("vecD");
-    end = MPI_Wtime();
+    intVecD.show("intVec");
+    doubleVecD.show("doubleVec");
 
-//    s << end - start << "s" << std::endl;
-//    if (Utils::proc_rank == 0)
-//        printf("%s", s.str().c_str());
-//    std::cout << "VecD: ";
+    auto intSum = [] (int val1, int val2) {return val1 + val2;};
+    auto doubleSum = [] (double val1, double val2) {return val1 + val2;};
+
+    auto intReduced = intVecD.reduce(intSum);
+    auto doubleReduced = doubleVecD.reduce(doubleSum);
 
 
-    VectorDistribution<int> vecResult;
-
-    auto myAddLamda = [](int v1) {return v1 + 20;};
-    vecResult = vecD.map<int>(mapAddFunctor);
-    vecResult.show("After mapping");
-
-    std::vector<int> test(9);
-    vecResult.gatherVectors(test);
-    printVec(test);
-    vecResult.show("same");
-
-    //DOUBLE
-    std::vector<double> myDoubleVec{1.25, 2.0, 3.0, 4.0, 5.25, 6.0, 7.0, 8.0, 9.0};
-
-    VectorDistribution<double> zipVector(myDoubleVec);
-    zipVector.printLocal();
-//    zipResult = vecD.zip<int>(zipVector, myAddZip);
-
-    auto myTest = [](double v1, double v2) {return v1 + v2; };
-    auto zipResult = zipVector.zip<double>(zipVector, myTest);
-
-    zipResult.printLocal();
-
-    std::vector<double> finalResult(9);
-    zipResult.gatherVectors(finalResult);
-    printVec(finalResult);
-
-
-
-//    vecResult.printLocal();
-
-//    zipResult.gatherVectors(finalResult);
-
-    auto reduceFunc = [] (double val1, double val2) {return val1 + val2;};
-    auto reduced = zipResult.reduce(reduceFunc);
-    if (Utils::proc_rank == 0) {
-        std::cout << reduced << std::endl;
-    }
-    printVec(finalResult);
+    std::cout << "intRed: " << intReduced << std::endl;
+    std::cout << "doubleRed: " << doubleReduced << std::endl;
 
 
     terminateSkeletons();
