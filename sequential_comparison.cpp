@@ -69,17 +69,21 @@ void printVec(std::vector<T> vector) {
 }
 
 int main(int argc, char** argv) {
-    int iterations = 1;
+    int iterations = 5;
     int size = 10;
+    int perform = 1;
     int c;
 
-    while ((c = getopt(argc, argv, "n:s:")) != -1) {
+    while ((c = getopt(argc, argv, "n:s:p:")) != -1) {
         switch (c) {
             case 'n':
                 iterations = atoi(optarg);
                 break;
             case 's':
                 size = atoi(optarg);
+                break;
+            case 'p':
+                perform = atoi(optarg);
                 break;
             case '?':
                 return 1;
@@ -121,7 +125,8 @@ int main(int argc, char** argv) {
         // MAP FUNCTION
         //
         double t = MPI_Wtime();
-        outputMap = map(input1,mapFunction);
+        for (int p = 0; p < perform; ++p)
+            outputMap = map(input1,mapFunction);
 //        printVec(outputMap);
 
         // Timing
@@ -131,8 +136,8 @@ int main(int argc, char** argv) {
         // ZIP FUNCTION
         //
         t = MPI_Wtime();
-        outputZip = zip(input1, input2, zipFunction);
-//        printVec(outputZip);
+        for (int p = 0; p < perform; ++p)
+            outputZip = zip(input1, input2, zipFunction);
 
         // Timing
         zipTime += MPI_Wtime() - t;
@@ -141,39 +146,33 @@ int main(int argc, char** argv) {
         // REDUCE FUNCTION
         //
         t = MPI_Wtime();
-        outReduce = reduce(outputZip, reduceFunction);
-//        std::cout << "outReduce\n" << outReduce << std::endl;
+        for (int p = 0; p < perform; ++p)
+            outReduce = reduce(outputZip, reduceFunction);
 
         // Timing
         reduceTime += MPI_Wtime() - t;
+
+        if (run < 4) {
+            mapTime = reduceTime = zipTime = 0; // Warm up
+            startTime = MPI_Wtime();
+        }
 
 //        double result = MPI_Wtime() - splitTime;
 //        splitTime = MPI_Wtime();
 //        std::cout << "Run " << run << ": " << result << "s" << std::endl;
 
-//        if (run == iterations - 1) {
-//            printVec(input1);
-//            printVec(input2);
-//            printVec(outputZip);
-//            std::cout << outReduce << std::endl;
-//        }
     }
     // Timing
 //    std::cout << "Map time: " << mapTime / iterations << "s" << std::endl
 //              << "Zip time: " << zipTime / iterations << "s" << std::endl
 //              << "Reduce time: " << reduceTime / iterations << "s" << std::endl;
 
-    printf("Map;%i;%f\n", size, mapTime / iterations);
-    printf("Zip;%i;%f\n", size, zipTime / iterations);
-    printf("Red;%i;%f\n", size, reduceTime / iterations);
+    double divIter = iterations - 4.0;
+    printf("Map;%i;%f\n", size, mapTime / divIter);
+    printf("Zip;%i;%f\n", size, zipTime / divIter);
+    printf("Red;%i;%f\n", size, reduceTime / divIter);
     double totalTime = MPI_Wtime() - startTime;
-    printf("Time/runs;%i;%f\n", size, totalTime / iterations);
-
-//    std::cout << "Map;" << mapTime / iterations << "s" << std::endl
-//              << "Zip time: " << zipTime / iterations << "s" << std::endl
-//              << "Reduce time: " << reduceTime / iterations << "s" << std::endl;
-
-//    std::cout << "\nTime/runs: " << totalTime/iterations << std::endl;
+    printf("Time/runs;%i;%f\n", size, totalTime / divIter);
 
     return 0;
 }

@@ -7,16 +7,23 @@
 #include "VectorDistribution.hpp"
 #include "Utils.hpp"
 
+double getAvg(double t)
+{
+    double sum;
+    MPI_Allreduce(&t, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    return sum/Utils::num_procs;
+}
 
 int main(int argc, char** argv) {
     initSkeletons(argc, argv);
 //
-    int iterations = 1;
+    int iterations = 5;
     int size = 10;
-    int threads = 2;
+    int threads = 1;
+    int perform = 1;
     int c;
 
-    while ((c = getopt(argc, argv, "n:s:t:")) != -1) {
+    while ((c = getopt(argc, argv, "n:s:t:p:")) != -1) {
         switch (c) {
             case 'n':
                 iterations = atoi(optarg);
@@ -26,6 +33,9 @@ int main(int argc, char** argv) {
                 break;
             case 't':
                 threads = atoi(optarg);
+                break;
+            case 'p':
+                perform = atoi(optarg);
                 break;
             case '?':
                 return 1;
@@ -42,7 +52,6 @@ int main(int argc, char** argv) {
     double startTime, mapTime, reduceTime, zipTime;
     mapTime = reduceTime = zipTime = 0;
 
-    startTime =  MPI_Wtime();
     for (int run = 0; run < iterations; run++) {
         // Create data structures
         // Input data
@@ -57,8 +66,6 @@ int main(int argc, char** argv) {
 
         VectorDistribution<int> inputVD1(input1);
         VectorDistribution<int> inputVD2(input2);
-//        inputVD1.show("VD1");
-//        inputVD2.show("VD2");
 
         // Output
         VectorDistribution<int> outputMap;
@@ -74,64 +81,56 @@ int main(int argc, char** argv) {
         //
         // MAP FUNCTION
         //
-
         double t = MPI_Wtime();
-        outputMap = inputVD1.map<int>(mapFunction);
-//        outputMap.show("outMap");
+        for (int p = 0; p < perform; ++p)
+            outputMap = inputVD1.map<int>(mapFunction);
 
         // Timing
         mapTime += MPI_Wtime() - t;
+        mapTime = getAvg(mapTime);
 
         //
         // ZIP FUNCTION
         //
         t = MPI_Wtime();
-        outputZip = inputVD1.zip<int>(inputVD2, zipFunction);
-//        outputZip.show("OutZip");
+        for (int p = 0; p < perform; ++p)
+            outputZip = inputVD1.zip<int>(inputVD2, zipFunction);
 
         // Timing
         zipTime += MPI_Wtime() - t;
+        zipTime = getAvg(zipTime);
 
         //
         // REDUCE FUNCTION
         //
         t = MPI_Wtime();
-        outReduce = outputZip.reduce(reduceFunction);
-//        if (Utils::proc_rank == 0)
-//            std::cout << "ourReduce: "  << outReduce << std::endl;
+        for (int p = 0; p < perform; ++p)
+            outReduce = inputVD1.reduce(reduceFunction);
 
         // Timing
         reduceTime += MPI_Wtime() - t;
+        reduceTime = getAvg(reduceTime);
+
+        if (run < 4) {
+            mapTime = reduceTime = zipTime = 0; // Warm up
+            startTime = MPI_Wtime();
+        }
+
 
 //        double result = MPI_Wtime() - splitTime;
 //        splitTime = MPI_Wtime();
 //        std::cout << "Run " << run << ": " << result << "s" << std::endl;
-
-//        if (run == iterations - 1) {
-//            printVec(input1);
-//            printVec(input2);
-//            printVec(outputZip);
-//            std::cout << outReduce << std::endl;
-//        }
     }
-    // Timing
-//    std::cout << "Map time: " << mapTime / iterations << "s" << std::endl
-//              << "Zip time: " << zipTime / iterations << "s" << std::endl
-//              << "Reduce time: " << reduceTime / iterations << "s" << std::endl;
 
     if (Utils::proc_rank == 0) {
-        printf("Map;%i;%f;%i\n", size, mapTime / iterations, threads);
-        printf("Zip;%i;%f;%i\n", size, zipTime / iterations, threads);
-        printf("Red;%i;%f;%i\n", size, reduceTime / iterations, threads);
+        double divIter = iterations - 4.0;
+        printf("Map;%i;%f;%i\n", size, mapTime / divIter, threads);
+        printf("Zip;%i;%f;%i\n", size, zipTime / divIter, threads);
+        printf("Red;%i;%f;%i\n", size, reduceTime / divIter, threads);
         double totalTime = MPI_Wtime() - startTime;
-        printf("Time/runs;%i;%f;%i\n", size, totalTime / iterations, threads);
+        printf("Time/runs;%i;%f;%i\n", size, totalTime / divIter, threads);
     }
 
-//    std::cout << "Map;" << mapTime / iterations << "s" << std::endl
-//              << "Zip time: " << zipTime / iterations << "s" << std::endl
-//              << "Reduce time: " << reduceTime / iterations << "s" << std::endl;
-
-//    std::cout << "\nTime/runs: " << totalTime/iterations << std::endl;
     terminateSkeletons();
     return 0;
 }
