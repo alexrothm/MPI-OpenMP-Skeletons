@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
     }
 
     if (Utils::proc_rank == 0) {
-        double divIter = iterations - 4.0;
+        int divIter = iterations - 4;
         printf("Map;%i;%f;%i\n", size, mapTime / divIter, threads);
         printf("Zip;%i;%f;%i\n", size, zipTime / divIter, threads);
         printf("Red;%i;%f;%i\n", size, reduceTime / divIter, threads);

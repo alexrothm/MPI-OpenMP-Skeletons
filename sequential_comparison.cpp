@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
 //              << "Zip time: " << zipTime / iterations << "s" << std::endl
 //              << "Reduce time: " << reduceTime / iterations << "s" << std::endl;
 
-    double divIter = iterations - 4.0;
+    int divIter = iterations - 4;
     printf("Map;%i;%f\n", size, mapTime / divIter);
     printf("Zip;%i;%f\n", size, zipTime / divIter);
     printf("Red;%i;%f\n", size, reduceTime / divIter);
