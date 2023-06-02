@@ -32,12 +32,13 @@ void VectorDistribution<T>::init() {
     numProcesses = Utils::num_procs;
     rank = Utils::proc_rank;
 
+    // calculate localSize for each process
     localSize = vectorSize / numProcesses;
     remainingSize = vectorSize % numProcesses;
 
     // set first index befor adjusting last process vectorSize
     firstIndex = rank * localSize;
-    // set size of last process
+    // set add remainingSize of last process
     if (rank == numProcesses - 1) {
         localSize += remainingSize;
     }
@@ -57,30 +58,15 @@ void VectorDistribution<T>::setLocal(int localIndex, const T& value) {
 
 template <typename T>
 void VectorDistribution<T>::scatterData(const std::vector<T>& data) {
-    // using this seems faster than MPI_Scatter
     #pragma omp parallel for
     for (int i = 0; i < localSize; i++) {
         localVector[i] = data[i + firstIndex];
     };
-
-// Alternative with MPI_Scatter //
-//    needed if using MPI_Scatter
-//    if (rank == 0) {
-//        // TODO test OMP
-//        #pragma omp parallel for
-//        for (int i = 0; i < vectorSize; i++) {
-//            rootVector[i] = data[i];
-//        }
-//    }
-//    size_t s = localSize * sizeof(T);
-//    MPI_Scatter(rootVector.data(), s, MPI_BYTE,
-//                localVector.data(), s, MPI_BYTE,
-//                0, MPI_COMM_WORLD);
 }
 
 template <typename T>
 void VectorDistribution<T>::gatherVectors(std::vector<T>& results) {
-//    auto text =  (remainingSize) ? "Unequal" : "Equal";
+    // if remainingSize != 0
     if (remainingSize)
         gatherUnequalVectors(results);
     else
@@ -90,9 +76,8 @@ void VectorDistribution<T>::gatherVectors(std::vector<T>& results) {
 
 template <typename T>
 void VectorDistribution<T>::gatherEqualVectors(std::vector<T>& results) {
-//    results.resize(vectorSize);
-
     size_t s = localSize * sizeof(T);
+    // Store data from localVectors into results
     MPI_Gather(localVector.data(), s, MPI_BYTE,
                results.data(), s, MPI_BYTE,
                0, MPI_COMM_WORLD);
@@ -105,13 +90,10 @@ void VectorDistribution<T>::gatherUnequalVectors(std::vector<T>& results) {
     int elemSize = sizeof(T);
     const size_t s = localSize * elemSize;
 
-    //Changed to gather
-    MPI_Gather(&s, 1, MPI_INT, recvCounts, 1, MPI_INT, 0,MPI_COMM_WORLD);
-
-//    std::cout << "RecvCounts: ";
-//    for (int i = 0; i < numProcesses; i++) {
-//        std::cout << recvCounts[i] << " ";
-//    }
+    // Gather local sizes of each process
+    MPI_Gather(&s, 1, MPI_INT,
+               recvCounts, 1, MPI_INT,
+               0,MPI_COMM_WORLD);
 
     int totalCount = 0;
     int* displacements = new int[numProcesses];
@@ -122,33 +104,18 @@ void VectorDistribution<T>::gatherUnequalVectors(std::vector<T>& results) {
 
         for (int i = 1; i < numProcesses; i++) {
             totalCount += recvCounts[i];
+            // Calculate offset to write to correct position in recvBuffer
             displacements[i] = displacements[i-1] + recvCounts[i-1];
         }
-
-//        std::cout << "RecvCounts: ";
-//        for (int i = 0; i < numProcesses; i++) {
-//            std::cout << recvCounts[i] << " ";
-//        }
-//        std::cout << std::endl;
-//        std::cout << "Total count: " << totalCount << std::endl;
-//        for (int i = 0; i < numProcesses; i++) {
-//            std::cout << displacements[i] << " ";
-//        }
-//        std::cout << std::endl;
-
-//        gatheredVector.resize(totalCount);
     }
 
+    // Actually gather local data to the root process using recvCounts and displacements
     MPI_Gatherv(localVector.data(), localSize * elemSize, MPI_BYTE,
                 results.data(), recvCounts, displacements, MPI_BYTE,
                 0, MPI_COMM_WORLD);
 
     delete[] recvCounts;
     delete[] displacements;
-
-//    if (rank == 0) {
-//        results = gatheredVector;
-//    }
 }
 
 template <typename T>
@@ -195,9 +162,9 @@ template <typename R, typename MapFunctor>
 VectorDistribution<R> VectorDistribution<T>::map(MapFunctor &f) {
     VectorDistribution<R> result(vectorSize);
 
+    // using omp to share among threads
     #pragma omp parallel for
     for (int i = 0; i < localSize; i++) {
-//        std::cout << "Rank " << rank << "Number: " << f(localVector[i]) << std::endl;
         result.setLocal(i, f(localVector[i]));
     }
     return result;
@@ -206,19 +173,23 @@ VectorDistribution<R> VectorDistribution<T>::map(MapFunctor &f) {
 template <typename T>
 template <typename ReduceFunctor>
 T VectorDistribution<T>::reduce(ReduceFunctor &f) {
-    T result = T();
+    T result = T();         // end result
+    T localResult = T();    // localResult for each process
 
-    T localResult = T();
+    // multiple threads enter parallel region
     #pragma omp parallel
     {
+        // private result for each thread
         T privateLocalResult = T();
         auto privateSize = localVector.size();
-        //std::cout << privateSize << " !!! " << std::endl;
+
+        // Each thread calculates its portion
         #pragma omp for
         for (int i = 0; i < localSize; i++) {
             privateLocalResult = f(privateLocalResult, localVector[i]);
         }
-        //std::cout << privateLocalResult << std::endl;
+
+        // Make sure local result is calculated correctly
         #pragma omp critical
         {
             localResult = f(localResult, privateLocalResult);
@@ -233,7 +204,7 @@ T VectorDistribution<T>::reduce(ReduceFunctor &f) {
                allResults, s,MPI_BYTE,
                0, MPI_COMM_WORLD);
 
-
+    // Calculate the end result from partial results in allResults
     for (int i = 0; i < numProcesses; i++) {
         result = f(result, allResults[i]);
     }

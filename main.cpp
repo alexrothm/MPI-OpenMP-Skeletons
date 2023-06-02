@@ -16,7 +16,7 @@ double getAvg(double t)
 
 int main(int argc, char** argv) {
     initSkeletons(argc, argv);
-//
+
     int iterations = 5;
     int size = 10;
     int threads = 1;
@@ -43,10 +43,8 @@ int main(int argc, char** argv) {
                 abort();
         }
     }
-
+    // Set number of threads
     omp_set_num_threads(threads);
-
-//    printf("Iteration = %i, Size = %i, Threads = %i\n", iterations, size, threads);
 
     // Start
     double startTime, mapTime, reduceTime, zipTime;
@@ -115,11 +113,6 @@ int main(int argc, char** argv) {
             mapTime = reduceTime = zipTime = 0; // Warm up
             startTime = MPI_Wtime();
         }
-
-
-//        double result = MPI_Wtime() - splitTime;
-//        splitTime = MPI_Wtime();
-//        std::cout << "Run " << run << ": " << result << "s" << std::endl;
     }
 
     if (Utils::proc_rank == 0) {
@@ -131,6 +124,7 @@ int main(int argc, char** argv) {
         printf("Time/runs;%i;%f;%i\n", size, totalTime / divIter, threads);
     }
 
+    // Terminate the MPI Environment
     terminateSkeletons();
     return 0;
 }

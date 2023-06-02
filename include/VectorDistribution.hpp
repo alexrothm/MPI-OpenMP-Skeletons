@@ -46,14 +46,6 @@ public:
 
     void show(const std::string& descr);
 
-    /**
-     * \brief
-     *
-     * @tparam R
-     * @tparam MapFunctor
-     * @param f
-     * @return
-     */
     template <typename R, typename MapFunctor>
     VectorDistribution<R> map(MapFunctor &f);
 
